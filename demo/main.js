@@ -5,6 +5,8 @@ goog.require('atlas');
 goog.require('RenderCtx2D');
 goog.require('RenderWebGL');
 
+let g_ctx;
+
 main.start = function() {
   document.body.style.margin = '0px';
   document.body.style.border = '0px';
@@ -59,17 +61,39 @@ main.start = function() {
   messages.style.zIndex = -1; // behind controls
   document.body.appendChild(messages);
 
-  var canvas = document.createElement('canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  canvas.style.position = 'absolute';
-  canvas.style.width = canvas.width + 'px';
-  canvas.style.height = canvas.height + 'px';
-  canvas.style.zIndex = -1; // behind controls
+  const s = ( p ) => {
+    let x = 100; 
+    let y = 100;
+    let spriter_sprite;
+    let frame_count = 0;
 
-  document.body.appendChild(canvas);
+    p.setup = function() {
+      let c = p.createCanvas(640, 640);
+      g_ctx = c.canvas.getContext("2d");
+      spriter_sprite = new SpriterSprite("cat1/", "cat1.scon", null);
+    };
+  
+    p.draw = function() {
+      p.clear();
+      p.background("rgba(0,0,0,0.1)");
+      p.fill(255);
+      //p.rect(x,y,50,50);
+      p.noStroke();
+      p.fill(0);
+      p.textAlign(p.LEFT, p.BOTTOM);
+      p.text("Frame " + frame_count + ", fps=" + parseInt(p.frameRate()) + ", pixel density=" + p.pixelDensity(),
+        3, p.height-3);
+      frame_count ++;
+      loop(p.millis());
+      spriter_sprite.SetPos(p.width*0.7 + p.sin(p.millis() * 0.006)*8, p.height/2);
+      spriter_sprite.render(p.millis(), p.pixelDensity());
+      spriter_sprite.SetScale(0.75, 0.75);
+    };
+  };
+  
+  let myp5 = new p5(s);
 
-  var ctx = canvas.getContext('2d');
+  var ctx = g_ctx;
 
   window.addEventListener('resize', function() {
     canvas.width = window.innerWidth;
@@ -77,6 +101,7 @@ main.start = function() {
     canvas.style.width = canvas.width + 'px';
     canvas.style.height = canvas.height + 'px';
   });
+
 
   var render_ctx2d = new RenderCtx2D(ctx);
 
@@ -105,21 +130,20 @@ main.start = function() {
   var camera_y = 0;
   var camera_zoom = 1;
 
-  var enable_render_webgl = !!gl;
-  var enable_render_ctx2d = !!ctx && !enable_render_webgl;
+  var enable_render_webgl = false; //!!gl;
+  var enable_render_ctx2d = false;  //!!ctx && !enable_render_webgl;
 
-  add_checkbox_control("GL", enable_render_webgl, function(checked) {
-    enable_render_webgl = checked;
-  });
-  add_checkbox_control("2D", enable_render_ctx2d, function(checked) {
-    enable_render_ctx2d = checked;
-  });
-
+  // add_checkbox_control("GL", enable_render_webgl, function(checked) {
+  //   enable_render_webgl = checked;
+  // });
+  // add_checkbox_control("2D", enable_render_ctx2d, function(checked) {
+  //   enable_render_ctx2d = checked;
+  // });
   var enable_render_debug_pose = false;
 
-  add_checkbox_control("2D Debug Pose", enable_render_debug_pose, function(checked) {
-    enable_render_debug_pose = checked;
-  });
+  // add_checkbox_control("2D Debug Pose", enable_render_debug_pose, function(checked) {
+  //   enable_render_debug_pose = checked;
+  // });
 
   // sound player (Web Audio Context)
   var player_web = {};
@@ -127,9 +151,9 @@ main.start = function() {
   player_web.mute = true;
   player_web.sounds = {};
 
-  add_checkbox_control("Mute", player_web.mute, function(checked) {
-    player_web.mute = checked;
-  });
+  // add_checkbox_control("Mute", player_web.mute, function(checked) {
+  //   player_web.mute = checked;
+  // });
 
   var spriter_data = null;
   var spriter_pose = null;
@@ -144,19 +168,19 @@ main.start = function() {
 
   var anim_blend = 0.0;
 
-  add_range_control("Anim Rate", anim_rate, -2.0, 2.0, 0.1, function(value) {
-    anim_rate = value;
-  });
+  // add_range_control("Anim Rate", anim_rate, -2.0, 2.0, 0.1, function(value) {
+  //   anim_rate = value;
+  // });
 
-  add_range_control("Anim Blend", anim_blend, 0.0, 1.0, 0.01, function(value) {
-    anim_blend = value;
-  });
+  // add_range_control("Anim Blend", anim_blend, 0.0, 1.0, 0.01, function(value) {
+  //   anim_blend = value;
+  // });
 
   var alpha = 1.0;
 
-  add_range_control("Alpha", alpha, 0.0, 1.0, 0.01, function(value) {
-    alpha = value;
-  });
+  // add_range_control("Alpha", alpha, 0.0, 1.0, 0.01, function(value) {
+  //   alpha = value;
+  // });
 
   var loadFile = function(file, callback) {
     render_ctx2d.dropData(spriter_data, atlas_data);
@@ -302,8 +326,9 @@ main.start = function() {
     files.push(file);
   }
 
-  add_file("GreyGuy/", "player.scon", "player.tps.json");
-  add_file("GreyGuyPlus/", "player_006.scon", "player_006.tps.json");
+  //add_file("GreyGuy/", "player.scon", null);// "player.tps.json");
+  add_file("cat1/", "cat1.scon", null);
+  //add_file("GreyGuyPlus/", "player_006.scon", "player_006.tps.json");
 
   //add_file("SpriterExamples/BoxTagVariable/", "player.scon");
   //add_file("SpriterExamples/GreyGuyCharMaps/", "player_001.scon");
@@ -332,6 +357,7 @@ main.start = function() {
   messages.innerHTML = "loading";
   loading = true;
   loadFile(file, function() {
+    console.log(spriter_data)
     loading = false;
     var entity_keys = spriter_data.getEntityKeys();
     var entity_key = entity_keys[entity_index = 0];
@@ -356,8 +382,6 @@ main.start = function() {
   var prev_time = 0;
 
   var loop = function(time) {
-    requestAnimationFrame(loop);
-
     var dt = time - (prev_time || time);
     prev_time = time; // ms
 
@@ -452,7 +476,7 @@ main.start = function() {
 
     if (ctx) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      //ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
 
     if (gl) {
@@ -670,7 +694,7 @@ main.start = function() {
     }
   }
 
-  requestAnimationFrame(loop);
+  //requestAnimationFrame(loop);
 }
 
 function loadText(url, callback) {

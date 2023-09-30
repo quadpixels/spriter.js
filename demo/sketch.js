@@ -508,4 +508,8 @@ class SpriterSprite {
     this.scale_x = x;
     this.scale_y = y;
   }
+
+  SetAnimRate(r) {
+    this.anim_rate = r;
+  }
 }

@@ -6,6 +6,9 @@ goog.require('RenderCtx2D');
 goog.require('RenderWebGL');
 
 let g_ctx;
+let g_document_hidden = false;
+let g_next_tick_msec = 0;
+let g_p5;
 
 main.start = function() {
   document.body.style.margin = '0px';
@@ -62,18 +65,44 @@ main.start = function() {
   document.body.appendChild(messages);
 
   const s = ( p ) => {
+    g_p5 = p;
     let x = 100; 
     let y = 100;
     let spriter_sprite;
     let frame_count = 0;
+    let metronome_sound;
+    let slider;
+    let btn_dec;
+    let btn_inc;
+
+    p.preload = function() {
+      metronome_sound = p.loadSound("metronome-85688.mp3");
+    }
 
     p.setup = function() {
       let c = p.createCanvas(640, 640);
       g_ctx = c.canvas.getContext("2d");
       spriter_sprite = new SpriterSprite("cat1/", "cat1.scon", null);
+      slider = p.createSlider(30, 200, 75);
+      slider.position(10, 10);
+
+      btn_dec = p.createButton("-1");
+      btn_dec.position(200, 10);
+      btn_dec.mousePressed(()=>{
+        slider.value(slider.value() - 1);
+      });
+
+      btn_dec = p.createButton("+1");
+      btn_dec.position(240, 10);
+      btn_dec.mousePressed(() => {
+        slider.value(slider.value() + 1);
+      })
     };
   
     p.draw = function() {
+      const ms = p.millis();
+      if (g_document_hidden) return;
+      p.push();
       p.clear();
       p.background("rgba(0,0,0,0.1)");
       p.fill(255);
@@ -83,11 +112,22 @@ main.start = function() {
       p.textAlign(p.LEFT, p.BOTTOM);
       p.text("Frame " + frame_count + ", fps=" + parseInt(p.frameRate()) + ", pixel density=" + p.pixelDensity(),
         3, p.height-3);
+      p.textSize(30);
+      p.textAlign(p.LEFT, p.TOP);
+      p.text(slider.value() + " bpm", 10, 50);
       frame_count ++;
-      loop(p.millis());
-      spriter_sprite.SetPos(p.width*0.7 + p.sin(p.millis() * 0.006)*8, p.height/2);
+      loop(ms);
+      spriter_sprite.SetPos(p.width*0.5 + p.sin(p.millis() * 0.006)*8, p.height/2);
       spriter_sprite.render(p.millis(), p.pixelDensity());
       spriter_sprite.SetScale(0.75, 0.75);
+      spriter_sprite.SetAnimRate(1.5 * slider.value() / 180.0);
+      if (!g_document_hidden) {
+        if (ms > g_next_tick_msec) {
+          metronome_sound.play();
+          g_next_tick_msec += 60000.0 / slider.value();
+        }
+      }
+      p.pop();
     };
   };
   
@@ -763,3 +803,13 @@ function loadSound(url, callback) {
   }
   return req;
 }
+
+document.addEventListener("visibilitychange", ()=>{
+  if (document.hidden) {
+    g_document_hidden = true;
+  } else {
+    g_document_hidden = false;
+    g_next_tick_msec = g_p5.millis();
+  }
+});
+
